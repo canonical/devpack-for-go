@@ -1,0 +1,23 @@
+#!/bin/sh -e
+
+# 1. Check if the Go snap is installed
+# Since we are in classic confinement, we can check the system path or /snap/bin
+if [ ! -f "/snap/bin/go" ] && [ ! -x "$(command -v go)" ]; then
+    echo "------------------------------------------------------------------"
+    echo "ERROR: The 'go' snap is not found!"
+    echo "This devpack relies on the official Go snap."
+    echo ""
+    echo "Please run the following command first:"
+    echo "    sudo snap install go --classic"
+    echo ""
+    echo "Installation aborted."
+    echo "------------------------------------------------------------------"
+    exit 1
+fi
+
+# 2. Print post-install instructions (Visible in terminal logs)
+echo "------------------------------------------------------------------"
+echo "Success! Go detected."
+echo "To finish setup (aliases & VS Code config), run:"
+echo "    devpack-for-go.setup-guide"
+echo "------------------------------------------------------------------"

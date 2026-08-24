@@ -1,0 +1,86 @@
+name: devpack-for-go
+version: '1.0+rev2'
+summary: Go development tools companion for the Go snap
+description: |
+  A companion snap for Go developers that provides essential development tools.
+  Requires 'go' to be installed via snap.
+
+base: core22
+confinement: classic
+grade: stable
+
+# Register the hook so Snapcraft knows to include it
+hooks:
+  configure:
+    plugs: [network] # Network access usually not needed for check, but good for safety
+
+apps:
+  # The Setup Helper
+  setup-guide:
+    command: bin/setup-guide.sh
+    environment:
+      PATH: $SNAP/bin:$PATH
+
+  delve:
+    command: bin/dlv
+    environment:
+      PATH: /snap/go/current/bin:$SNAP/bin:$PATH
+
+  gopls:
+    command: bin/gopls
+    environment:
+      PATH: /snap/go/current/bin:$SNAP/bin:$PATH
+
+  golangci-lint:
+    command: bin/golangci-lint
+    environment:
+      PATH: /snap/go/current/bin:$SNAP/bin:$PATH
+
+  govulncheck:
+    command: bin/govulncheck
+    environment:
+      PATH: /snap/go/current/bin:$SNAP/bin:$PATH
+
+  gotests:
+    command: bin/gotests
+    environment:
+      PATH: /snap/go/current/bin:$SNAP/bin:$PATH
+
+  gofumpt:
+    command: bin/gofumpt
+    environment:
+      PATH: /snap/go/current/bin:$SNAP/bin:$PATH
+
+parts:
+  # This part copies our helper script into the snap
+  local-scripts:
+    plugin: dump
+    source: snap/local
+    organize:
+      setup-guide.sh: bin/setup-guide.sh
+
+  tools:
+    plugin: nil
+    build-snaps:
+      - go/latest/stable
+    override-build: |
+      export PATH=/snap/go/current/bin:$PATH
+      export GOPATH=$SNAPCRAFT_PART_BUILD/gopath
+
+      # Create bin directory
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+
+      # Install Tools
+      # (Added -v to see progress during build)
+      echo "Installing tools..."
+      GOBIN=$SNAPCRAFT_PART_INSTALL/bin go install -v github.com/go-delve/delve/cmd/dlv@latest
+      GOBIN=$SNAPCRAFT_PART_INSTALL/bin go install -v golang.org/x/tools/gopls@latest
+      GOBIN=$SNAPCRAFT_PART_INSTALL/bin go install -v github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+      GOBIN=$SNAPCRAFT_PART_INSTALL/bin go install -v golang.org/x/vuln/cmd/govulncheck@latest
+      GOBIN=$SNAPCRAFT_PART_INSTALL/bin go install -v github.com/cweill/gotests/gotests@latest
+      GOBIN=$SNAPCRAFT_PART_INSTALL/bin go install -v mvdan.cc/gofumpt@latest
+
+      chmod +x $SNAPCRAFT_PART_INSTALL/bin/*
+
+    stage:
+      - bin/*
