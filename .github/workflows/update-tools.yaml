@@ -1,0 +1,41 @@
+name: Update tools
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.x'
+          cache: true
+      - run: go run ./cmd/update-versions --write
+      - run: go test ./...
+      - id: snapcraft
+        uses: snapcore/action-build@v1
+      - run: sudo snap install go --classic --channel=1.26/stable
+      - run: sudo snap install "${{ steps.snapcraft.outputs.snap }}" --classic --dangerous
+      - run: tests/smoke.sh
+      - run: sudo snap refresh go --channel=1.27/stable
+      - run: tests/smoke.sh
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: automated/update-go-tools
+          commit-message: Update bundled Go tools
+          title: Update bundled Go tools
+          body: |
+            Automated update to the latest stable Go tool releases.
+
+            The updated snap was built and smoke-tested against both supported Go releases.
+            The normal pull request checks must also pass before this is merged.
+          delete-branch: true
+          labels: dependencies

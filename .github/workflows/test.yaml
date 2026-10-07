@@ -1,0 +1,50 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.x'
+          cache: true
+      - run: test -z "$(gofmt -l .)"
+      - run: go test ./...
+      - run: go vet ./...
+      - run: shellcheck snap/local/with-go tests/smoke.sh
+
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - id: snapcraft
+        uses: snapcore/action-build@v1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: devpack-for-go-snap
+          path: ${{ steps.snapcraft.outputs.snap }}
+
+  smoke:
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        go-channel: [1.26/stable, 1.27/stable]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: devpack-for-go-snap
+          path: dist
+      - run: sudo snap install go --classic --channel=${{ matrix.go-channel }}
+      - run: sudo snap install dist/*.snap --classic --dangerous
+      - run: tests/smoke.sh
