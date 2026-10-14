@@ -44,9 +44,20 @@ devpack-for-go versions
 
 The tools are always available under snap-qualified names such as
 `devpack-for-go.gopls` and `devpack-for-go.golangci-lint`. The snap also
-requests the direct aliases `dlv`, `gopls`, `golangci-lint`, `govulncheck`,
-`gotests`, and `gofumpt`. These aliases become available automatically once
-they are approved in the Snap Store.
+requests the direct aliases `dlv` and `gotests`, which become available
+automatically once the Snap Store approves them.
+
+`gopls`, `golangci-lint`, `govulncheck`, and `gofumpt` are deliberately not
+aliased: the store already has snaps under those names, and snapd grants each
+snap use of its own name. If you do not install those snaps, you can still
+create the aliases yourself:
+
+```shell
+sudo snap alias devpack-for-go.gopls gopls
+sudo snap alias devpack-for-go.golangci-lint golangci-lint
+sudo snap alias devpack-for-go.govulncheck govulncheck
+sudo snap alias devpack-for-go.gofumpt gofumpt
+```
 
 ## Editor Integration
 
