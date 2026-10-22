@@ -1,0 +1,26 @@
+#!/bin/sh
+
+set -eu
+
+if command -v go >/dev/null 2>&1; then
+    exec "$@"
+fi
+
+for snap_bin in /snap/bin /var/lib/snapd/snap/bin; do
+    if [ -x "$snap_bin/go" ]; then
+        PATH="$snap_bin:$PATH"
+        export PATH
+        exec "$@"
+    fi
+done
+
+cat >&2 <<'EOF'
+No Go toolchain was found on PATH.
+
+Install Go, for example:
+    sudo snap install go --classic
+
+Then rerun this command. Devpack for Go also supports Go installed through
+apt, a tarball, or a version manager when its 'go' command is on PATH.
+EOF
+exit 1

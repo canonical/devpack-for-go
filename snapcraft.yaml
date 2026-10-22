@@ -1,86 +1,176 @@
 name: devpack-for-go
-version: '1.0+rev2'
-summary: Go development tools companion for the Go snap
+title: Devpack for Go
+version: '2026.10.1'
+summary: Current Go development tools in one maintained snap
 description: |
-  A companion snap for Go developers that provides essential development tools.
-  Requires 'go' to be installed via snap.
+  Devpack for Go packages current, tested releases of commonly used Go
+  development tools: Delve, gopls, golangci-lint, govulncheck, gotests, and
+  gofumpt.
 
-base: core22
+  The tools use the Go installation selected by the user's PATH. The official
+  Go snap is recommended, but Go installed through a distribution package,
+  tarball, or version manager is also supported.
+
+  After installation, run 'devpack-for-go setup' to configure an editor, or
+  'devpack-for-go doctor' to inspect the detected Go toolchain and tools.
+
+base: core24
 confinement: classic
 grade: stable
+license: GPL-3.0-only
+source-code: https://github.com/canonical/devpack-for-go
+issues: https://github.com/canonical/devpack-for-go/issues
+website: https://snapcraft.io/devpack-for-go
+contact: https://github.com/canonical/devpack-for-go/issues
 
-# Register the hook so Snapcraft knows to include it
-hooks:
-  configure:
-    plugs: [network] # Network access usually not needed for check, but good for safety
+platforms:
+  amd64:
+  arm64:
+
+build-snaps:
+  - go/1.27/stable
+
+environment:
+  PATH: $SNAP/bin:$PATH
 
 apps:
-  # The Setup Helper
-  setup-guide:
-    command: bin/setup-guide.sh
-    environment:
-      PATH: $SNAP/bin:$PATH
+  devpack-for-go:
+    command: bin/devpack-for-go
 
+  setup:
+    command: bin/devpack-for-go setup
+
+  # Compatibility command from releases before the 2026.10 redesign.
+  setup-guide:
+    command: bin/devpack-for-go setup
+
+  # No automatic aliases are declared yet: every tool is available under its
+  # snap-qualified name, devpack-for-go.<tool>. The store already has snaps
+  # named gopls, golangci-lint, govulncheck, and gofumpt, and snapd grants each
+  # snap use of its own name, so those four cannot be aliased here. dlv and
+  # gotests are requested in https://forum.snapcraft.io/t/53706 and will be
+  # declared once the store grants them.
+  dlv:
+    command: bin/dlv
+    command-chain: [bin/with-go]
+
+  # Keep the original qualified command available for existing users.
   delve:
     command: bin/dlv
-    environment:
-      PATH: /snap/go/current/bin:$SNAP/bin:$PATH
+    command-chain: [bin/with-go]
 
   gopls:
     command: bin/gopls
-    environment:
-      PATH: /snap/go/current/bin:$SNAP/bin:$PATH
+    command-chain: [bin/with-go]
 
   golangci-lint:
     command: bin/golangci-lint
-    environment:
-      PATH: /snap/go/current/bin:$SNAP/bin:$PATH
+    command-chain: [bin/with-go]
 
   govulncheck:
     command: bin/govulncheck
-    environment:
-      PATH: /snap/go/current/bin:$SNAP/bin:$PATH
+    command-chain: [bin/with-go]
 
   gotests:
     command: bin/gotests
-    environment:
-      PATH: /snap/go/current/bin:$SNAP/bin:$PATH
 
   gofumpt:
     command: bin/gofumpt
-    environment:
-      PATH: /snap/go/current/bin:$SNAP/bin:$PATH
 
 parts:
-  # This part copies our helper script into the snap
-  local-scripts:
+  devpack-cli:
+    plugin: nil
+    source: .
+    override-build: |
+      set -eu
+      mkdir -p "$CRAFT_PART_INSTALL/bin"
+      CGO_ENABLED=0 GOTOOLCHAIN=local go build \
+        -trimpath -ldflags="-s -w" \
+        -o "$CRAFT_PART_INSTALL/bin/devpack-for-go" \
+        ./cmd/devpack-for-go
+
+  runtime:
     plugin: dump
     source: snap/local
     organize:
-      setup-guide.sh: bin/setup-guide.sh
-
-  tools:
-    plugin: nil
-    build-snaps:
-      - go/latest/stable
-    override-build: |
-      export PATH=/snap/go/current/bin:$PATH
-      export GOPATH=$SNAPCRAFT_PART_BUILD/gopath
-
-      # Create bin directory
-      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
-
-      # Install Tools
-      # (Added -v to see progress during build)
-      echo "Installing tools..."
-      GOBIN=$SNAPCRAFT_PART_INSTALL/bin go install -v github.com/go-delve/delve/cmd/dlv@latest
-      GOBIN=$SNAPCRAFT_PART_INSTALL/bin go install -v golang.org/x/tools/gopls@latest
-      GOBIN=$SNAPCRAFT_PART_INSTALL/bin go install -v github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-      GOBIN=$SNAPCRAFT_PART_INSTALL/bin go install -v golang.org/x/vuln/cmd/govulncheck@latest
-      GOBIN=$SNAPCRAFT_PART_INSTALL/bin go install -v github.com/cweill/gotests/gotests@latest
-      GOBIN=$SNAPCRAFT_PART_INSTALL/bin go install -v mvdan.cc/gofumpt@latest
-
-      chmod +x $SNAPCRAFT_PART_INSTALL/bin/*
-
+      with-go: bin/with-go
     stage:
-      - bin/*
+      - bin/with-go
+
+  dlv:
+    plugin: nil
+    source: internal/toolversions
+    override-build: |
+      set -eu
+      . "$CRAFT_PART_SRC/versions.env"
+      mkdir -p "$CRAFT_PART_INSTALL/bin"
+      CGO_ENABLED=0 GOTOOLCHAIN=local GOBIN="$CRAFT_PART_INSTALL/bin" \
+        go install -trimpath -ldflags="-s -w" \
+        "github.com/go-delve/delve/cmd/dlv@$DLV_VERSION"
+    stage:
+      - bin/dlv
+
+  gopls:
+    plugin: nil
+    source: internal/toolversions
+    override-build: |
+      set -eu
+      . "$CRAFT_PART_SRC/versions.env"
+      mkdir -p "$CRAFT_PART_INSTALL/bin"
+      CGO_ENABLED=0 GOTOOLCHAIN=local GOBIN="$CRAFT_PART_INSTALL/bin" \
+        go install -trimpath -ldflags="-s -w" \
+        "golang.org/x/tools/gopls@$GOPLS_VERSION"
+    stage:
+      - bin/gopls
+
+  golangci-lint:
+    plugin: nil
+    source: internal/toolversions
+    override-build: |
+      set -eu
+      . "$CRAFT_PART_SRC/versions.env"
+      mkdir -p "$CRAFT_PART_INSTALL/bin"
+      CGO_ENABLED=0 GOTOOLCHAIN=local GOBIN="$CRAFT_PART_INSTALL/bin" \
+        go install -trimpath -ldflags="-s -w" \
+        "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$GOLANGCI_LINT_VERSION"
+    stage:
+      - bin/golangci-lint
+
+  govulncheck:
+    plugin: nil
+    source: internal/toolversions
+    override-build: |
+      set -eu
+      . "$CRAFT_PART_SRC/versions.env"
+      mkdir -p "$CRAFT_PART_INSTALL/bin"
+      CGO_ENABLED=0 GOTOOLCHAIN=local GOBIN="$CRAFT_PART_INSTALL/bin" \
+        go install -trimpath -ldflags="-s -w" \
+        "golang.org/x/vuln/cmd/govulncheck@$GOVULNCHECK_VERSION"
+    stage:
+      - bin/govulncheck
+
+  gotests:
+    plugin: nil
+    source: internal/toolversions
+    override-build: |
+      set -eu
+      . "$CRAFT_PART_SRC/versions.env"
+      mkdir -p "$CRAFT_PART_INSTALL/bin"
+      CGO_ENABLED=0 GOTOOLCHAIN=local GOBIN="$CRAFT_PART_INSTALL/bin" \
+        go install -trimpath -ldflags="-s -w" \
+        "github.com/cweill/gotests/gotests@$GOTESTS_VERSION"
+    stage:
+      - bin/gotests
+
+  gofumpt:
+    plugin: nil
+    source: internal/toolversions
+    override-build: |
+      set -eu
+      . "$CRAFT_PART_SRC/versions.env"
+      mkdir -p "$CRAFT_PART_INSTALL/bin"
+      CGO_ENABLED=0 GOTOOLCHAIN=local GOBIN="$CRAFT_PART_INSTALL/bin" \
+        go install -trimpath -ldflags="-s -w" \
+        "mvdan.cc/gofumpt@$GOFUMPT_VERSION"
+    stage:
+      - bin/gofumpt
