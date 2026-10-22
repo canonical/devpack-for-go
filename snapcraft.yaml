@@ -44,20 +44,21 @@ apps:
   setup-guide:
     command: bin/devpack-for-go setup
 
+  # No automatic aliases are declared yet: every tool is available under its
+  # snap-qualified name, devpack-for-go.<tool>. The store already has snaps
+  # named gopls, golangci-lint, govulncheck, and gofumpt, and snapd grants each
+  # snap use of its own name, so those four cannot be aliased here. dlv and
+  # gotests are requested in https://forum.snapcraft.io/t/53706 and will be
+  # declared once the store grants them.
   dlv:
     command: bin/dlv
     command-chain: [bin/with-go]
-    aliases: [dlv]
 
   # Keep the original qualified command available for existing users.
   delve:
     command: bin/dlv
     command-chain: [bin/with-go]
 
-  # No aliases are declared for gopls, golangci-lint, govulncheck, or gofumpt:
-  # the store already has snaps under those names (gopls, golangci-lint,
-  # govulncheck, gofumpt), and snapd grants each snap use of its own name.
-  # These tools stay available as devpack-for-go.<tool>.
   gopls:
     command: bin/gopls
     command-chain: [bin/with-go]
@@ -72,7 +73,6 @@ apps:
 
   gotests:
     command: bin/gotests
-    aliases: [gotests]
 
   gofumpt:
     command: bin/gofumpt
