@@ -1,6 +1,6 @@
 name: devpack-for-go
 title: Devpack for Go
-version: '2026.10.1'
+version: '1.1'
 summary: Current Go development tools in one maintained snap
 description: |
   Devpack for Go packages current, tested releases of commonly used Go
@@ -40,7 +40,7 @@ apps:
   setup:
     command: bin/devpack-for-go setup
 
-  # Compatibility command from releases before the 2026.10 redesign.
+  # Compatibility command from releases before the 1.1 redesign.
   setup-guide:
     command: bin/devpack-for-go setup
 
