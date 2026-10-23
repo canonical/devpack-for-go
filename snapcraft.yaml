@@ -77,6 +77,10 @@ apps:
   gofumpt:
     command: bin/gofumpt
 
+  air:
+    command: bin/air
+    command-chain: [bin/with-go]
+
 parts:
   devpack-cli:
     plugin: nil
@@ -174,3 +178,16 @@ parts:
         "mvdan.cc/gofumpt@$GOFUMPT_VERSION"
     stage:
       - bin/gofumpt
+
+  air:
+    plugin: nil
+    source: internal/toolversions
+    override-build: |
+      set -eu
+      . "$CRAFT_PART_SRC/versions.env"
+      mkdir -p "$CRAFT_PART_INSTALL/bin"
+      CGO_ENABLED=0 GOTOOLCHAIN=local GOBIN="$CRAFT_PART_INSTALL/bin" \
+        go install -trimpath -ldflags="-s -w" \
+        "github.com/air-verse/air@$AIR_VERSION"
+    stage:
+      - bin/air
